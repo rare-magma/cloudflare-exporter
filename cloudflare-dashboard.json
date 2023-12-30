@@ -90,8 +90,8 @@
       "id": 1,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["min", "mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -212,8 +212,8 @@
       "id": 4,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["min", "mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -338,8 +338,8 @@
       "id": 3,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["min", "mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -582,8 +582,8 @@
       "id": 5,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["min", "mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -708,8 +708,8 @@
       "id": 7,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["min", "mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -720,7 +720,7 @@
       },
       "targets": [
         {
-          "alias": "$tag_zone $tag_edgeResponse",
+          "alias": "$tag_zone $tag_country",
           "datasource": {
             "type": "influxdb",
             "uid": "cf3ffd9c-be82-44cc-96de-69a6fa3d1a1a"
@@ -735,7 +735,7 @@
               "type": "tag"
             },
             {
-              "params": ["edgeResponse::tag"],
+              "params": ["country::tag"],
               "type": "tag"
             },
             {
@@ -743,7 +743,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "cloudflare_stats_content_type",
+          "measurement": "cloudflare_stats_countries",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -763,7 +763,7 @@
           "tags": []
         }
       ],
-      "title": "Requests per content type",
+      "title": "Requests per country",
       "type": "timeseries"
     },
     {
@@ -834,8 +834,8 @@
       "id": 6,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["min", "mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -960,8 +960,8 @@
       "id": 8,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["min", "mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -1033,6 +1033,6 @@
   "timezone": "",
   "title": "Cloudflare",
   "uid": "f0c9cc24-924f-4f0d-90be-7ff0d45bbce7",
-  "version": 2,
+  "version": 4,
   "weekStart": ""
 }
