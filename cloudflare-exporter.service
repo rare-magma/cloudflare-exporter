@@ -1,0 +1,29 @@
+[Unit]
+Description=Cloudflare Exporter
+After=network-online.target
+
+[Service]
+ExecStart=/home/%u/.local/bin/cloudflare_exporter.sh
+LoadCredential=creds:/home/%u/.config/cloudflare_exporter.conf
+LoadCredential=list:/home/%u/.config/cloudflare_zone_list.json
+Type=oneshot
+
+# Security hardening options
+DevicePolicy=closed
+KeyringMode=private
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateUsers=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectHostname=yes
+ProtectKernelLogs=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+SystemCallFilter=~@cpu-emulation @debug @module
+SystemCallFilter=~@mount @obsolete @privileged @raw-io @reboot @resources @swap
