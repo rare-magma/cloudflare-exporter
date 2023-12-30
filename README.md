@@ -133,7 +133,7 @@ Example:
 With Docker:
 
 ```bash
-   docker run --rm --init --tty --interactive --volume $(pwd):/app localhost/cloudflare-exporter /app/cloudflare_exporter.sh 7
+docker run --rm --init --tty --interactive --volume $(pwd):/app localhost/cloudflare-exporter /app/cloudflare_exporter.sh 7
 ```
 
 ## Troubleshooting
