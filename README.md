@@ -1,6 +1,6 @@
 # cloudflare-exporter
 
-Bash script that uploads the Cloudflare Analytics API data to influxdb on a daily basis
+Bash script that uploads the Cloudflare Analytics API data to influxdb on an hourly basis
 
 ## Dependencies
 
@@ -115,25 +115,6 @@ The zone list file should contain a list of zone ids and domain names in json fo
   { "id": "999999aba99dd9999ef99ab78965ab1c", "domain": "example.com" },
   { "id": "111111aba11dd1111ef11ab11111ab1c", "domain": "example2.com" }
 ]
-```
-
-## Exporting stats for dates in the past
-
-If the script is passed a number as the first argument, it will query the Cloudflare API for an interval in the past instead of the default date of "today".
-
-This argument should correspond to the number of days in the past relative to the current date.
-Take into account that the Cloudflare API doesn't allow queries for dates older than 7 days in the past.
-
-Example:
-
-```bash
-~/.local/bin/cloudflare_exporter.sh 7
-```
-
-With Docker:
-
-```bash
-docker run --rm --init --tty --interactive --volume $(pwd):/app localhost/cloudflare-exporter /app/cloudflare_exporter.sh 7
 ```
 
 ## Troubleshooting

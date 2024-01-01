@@ -1,7 +1,7 @@
 version: "3"
 services:
   scheduler:
-    image: ghcr.io/reddec/compose-scheduler:1.0.0
+    image: ghcr.io/reddec/compose-scheduler:1.0.1
     privileged: true
     restart: unless-stopped
     volumes:
@@ -16,4 +16,4 @@ services:
     volumes:
       - ./:/app:z
     labels:
-      net.reddec.scheduler.cron: "55 23 * * *"
+      net.reddec.scheduler.cron: "5 * * * *"
