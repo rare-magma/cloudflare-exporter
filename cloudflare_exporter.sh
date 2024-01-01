@@ -120,9 +120,9 @@ END_HEREDOC
     )
 
     cf_nb_errors=$(echo $cf_json | $JQ ".errors | length")
-    cf_errors=$(echo $cf_json | $JQ --raw-output ".errors[] | .message")
 
     if [[ $cf_nb_errors -gt 0 ]]; then
+        cf_errors=$(echo $cf_json | $JQ --raw-output ".errors[] | .message")
         printf "Cloudflare API request failed with: \n%s\nAborting\n" "$cf_errors" >&2
         exit 1
     fi
