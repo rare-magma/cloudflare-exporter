@@ -119,6 +119,14 @@ END_HEREDOC
             "$CF_URL"
     )
 
+    cf_nb_errors=$(echo $cf_json | $JQ ".errors | length")
+    cf_errors=$(echo $cf_json | $JQ --raw-output ".errors[] | .message")
+
+    if [[ $cf_nb_errors -gt 0 ]]; then
+        printf "Cloudflare API request failed with: \n%s\nAborting\n" "$cf_errors" >&2
+        exit 1
+    fi
+
     cf_nb_groups=$(echo $cf_json | $JQ ".data.viewer.zones[0].httpRequests1hGroups | length - 1")
 
     if [[ $cf_nb_groups -gt 0 ]]; then
