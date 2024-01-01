@@ -144,7 +144,7 @@ END_HEREDOC
             if [[ $nb_browsers -gt 0 ]]; then
                 for j in $(seq 0 "$nb_browsers"); do
                     mapfile -t cf_browser_values < <(
-                        echo $cf_json_parsed | $JQ ".sum.browserMap[$j] | .uaBrowserFamily, .pageViews // 0"
+                        echo $cf_json_parsed | $JQ --raw-output ".sum.browserMap[$j] | .uaBrowserFamily, .pageViews // 0"
                     )
                     cf_stats+=$(
                         printf "\ncloudflare_stats_browser,zone=%s,browserFamily=%s pageViews=%s %s" \
@@ -156,7 +156,7 @@ END_HEREDOC
             if [[ $nb_content_types -gt 0 ]]; then
                 for k in $(seq 0 "$nb_content_types"); do
                     mapfile -t cf_ct_values < <(
-                        echo $cf_json_parsed | $JQ ".sum.contentTypeMap[$k] | .bytes // 0, .edgeResponseContentTypeName, .requests // 0"
+                        echo $cf_json_parsed | $JQ --raw-output ".sum.contentTypeMap[$k] | .bytes // 0, .edgeResponseContentTypeName, .requests // 0"
                     )
                     cf_stats+=$(
                         printf "\ncloudflare_stats_content_type,zone=%s,edgeResponse=%s bytes=%s,requests=%s %s" \
@@ -168,7 +168,7 @@ END_HEREDOC
             if [[ $nb_countries -gt 0 ]]; then
                 for l in $(seq 0 "$nb_countries"); do
                     mapfile -t cf_country_values < <(
-                        echo $cf_json_parsed | $JQ ".sum.countryMap[$l] | .clientCountryName, .bytes // 0, .requests // 0, .threats // 0"
+                        echo $cf_json_parsed | $JQ --raw-output ".sum.countryMap[$l] | .clientCountryName, .bytes // 0, .requests // 0, .threats // 0"
                     )
                     cf_stats+=$(
                         printf \
@@ -182,7 +182,7 @@ END_HEREDOC
 
             if [[ $nb_ip_classes -gt 0 ]]; then
                 for m in $(seq 0 "$nb_ip_classes"); do
-                    mapfile -t cf_ip_values < <(echo $cf_json_parsed | $JQ ".sum.ipClassMap[$m] | .ipType, .requests // 0")
+                    mapfile -t cf_ip_values --raw-output < <(echo $cf_json_parsed | $JQ ".sum.ipClassMap[$m] | .ipType, .requests // 0")
                     cf_stats+=$(
                         printf \
                             "\ncloudflare_stats_ip,zone=%s,ipType=%s requests=%s %s" \
@@ -207,7 +207,7 @@ END_HEREDOC
             if [[ $nb_threat_pathing -gt 0 ]]; then
                 for o in $(seq 0 "$nb_response_status"); do
                     mapfile -t cf_threat_values < <(
-                        echo $cf_json_parsed | $JQ ".sum.threatPathingMap[$o] | .threatPathingMap, .requests // 0"
+                        echo $cf_json_parsed | $JQ --raw-output ".sum.threatPathingMap[$o] | .threatPathingMap, .requests // 0"
                     )
                     cf_stats+=$(
                         printf \
