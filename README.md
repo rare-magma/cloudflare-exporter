@@ -99,8 +99,8 @@ CLOUDFLARE_API_TOKEN='ZXhhbXBsZXRva2VuZXhhcXdzZGFzZGptcW9kcXdvZGptcXdvZHF3b2RqbX
 ```
 
 - `INFLUXDB_HOST` should be the FQDN of the influxdb server.
-- `ORG` should be the name of the influxdb organization that contains the cloudflare price data bucket defined below.
-- `BUCKET` should be the name of the influxdb bucket that will hold the cloudflare price data.
+- `ORG` should be the name of the influxdb organization that contains the cloudflare data bucket defined below.
+- `BUCKET` should be the name of the influxdb bucket that will hold the cloudflare data.
 - `INFLUXDB_API_TOKEN` should be the influxdb API token value.
   - This token should have write access to the `BUCKET` defined above.
 - `CLOUDFLARE_API_TOKEN` should be the cloudflare API token value.
