@@ -32,6 +32,7 @@ fi
 [[ -z "${CLOUDFLARE_API_TOKEN}" ]] && echo >&2 "CLOUDFLARE_API_TOKEN is empty. Aborting" && exit 1
 [[ -z "${CLOUDFLARE_ZONE_LIST}" ]] && echo >&2 "CLOUDFLARE_ZONE_LIST is empty. Aborting" && exit 1
 [[ $(echo "${CLOUDFLARE_ZONE_LIST}" | $JQ type 1>/dev/null) ]] && echo >&2 "CLOUDFLARE_ZONE_LIST is not valid JSON. Aborting" && exit 1
+[[ -n "${CLOUDFLARE_ACCOUNT_EMAIL}" ]] && CF_EMAIL_HEADER="X-Auth-Email: ${CLOUDFLARE_ACCOUNT_EMAIL}"
 
 RFC_CURRENT_DATE=$($DATE --rfc-3339=date)
 INFLUXDB_URL="https://$INFLUXDB_HOST/api/v2/write?precision=s&org=$ORG&bucket=$BUCKET"
@@ -114,6 +115,7 @@ END_HEREDOC
         $CURL --silent --fail --show-error --compressed \
             --request POST \
             --header "Content-Type: application/json" \
+            --header "$CF_EMAIL_HEADER" \
             --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             --data "$(echo -n $GRAPHQL_QUERY)" \
             "$CF_URL"

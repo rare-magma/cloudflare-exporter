@@ -105,6 +105,7 @@ CLOUDFLARE_API_TOKEN='ZXhhbXBsZXRva2VuZXhhcXdzZGFzZGptcW9kcXdvZGptcXdvZHF3b2RqbX
   - This token should have write access to the `BUCKET` defined above.
 - `CLOUDFLARE_API_TOKEN` should be the cloudflare API token value.
   - This token should be assigned the `All zones - Analytics:Read` permission.
+- Required for cloudflare accounts on a paid plan: `CLOUDFLARE_ACCOUNT_EMAIL` should be the email associated with the paid cloudflare account.
 
 ### Zone list file
 
