@@ -49,8 +49,8 @@ Bash script that uploads the Cloudflare Analytics API data to influxdb on an hou
 1. Run it.
 
    ```bash
-   docker run --rm --init --tty --interactive --volume $(pwd):/app localhost/cloudflare-exporter
-   ```
+    docker run --rm --init --tty --interactive --read-only --cap-drop ALL --security-opt no-new-privileges:true --cpus 2 -m 64m --pids-limit 16 --volume ./cloudflare_exporter.conf:/app/cloudflare_exporter.conf:ro --volume ./cloudflare_zone_list.json:/app/cloudflare_zone_list.json:ro ghcr.io/rare-magma/cloudflare-exporter:latest
+    ```
 
 ### With the Makefile
 

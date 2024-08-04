@@ -1,7 +1,18 @@
 version: "3"
 services:
   scheduler:
-    image: ghcr.io/reddec/compose-scheduler:1.0.1
+    image: ghcr.io/reddec/compose-scheduler:1.1.0
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 250m
+          pids: 1024
     privileged: true
     restart: unless-stopped
     volumes:
@@ -10,10 +21,19 @@ services:
   cloudflare-exporter:
     image: cloudflare-exporter:latest
     init: true
-    build:
-      context: .
-      dockerfile: ./Dockerfile
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 64m
+          pids: 16
     volumes:
-      - ./:/app:z
+      - ./cloudflare_exporter.conf:/app/cloudflare_exporter.conf:ro
+      - ./cloudflare_zone_list.json:/app/cloudflare_zone_list.json:ro
     labels:
       net.reddec.scheduler.cron: "5 * * * *"
