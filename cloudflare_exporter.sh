@@ -20,13 +20,16 @@ JQ=$(command -v jq)
 if [[ "${RUNNING_IN_DOCKER}" ]]; then
     source "/app/cloudflare_exporter.conf"
     CLOUDFLARE_ZONE_LIST=$($CAT /app/cloudflare_zone_list.json)
+    CLOUDFLARE_KV_NAMESPACES=$($CAT /app/cloudflare_kv_namespaces_list.conf)
 elif [[ -f $CREDENTIALS_DIRECTORY/creds ]]; then
     #shellcheck source=/dev/null
     source "$CREDENTIALS_DIRECTORY/creds"
     CLOUDFLARE_ZONE_LIST=$($CAT $CREDENTIALS_DIRECTORY/list)
+    CLOUDFLARE_KV_NAMESPACES=$($CAT $CREDENTIALS_DIRECTORY/namespaces_list)
 else
     source "./cloudflare_exporter.conf"
     CLOUDFLARE_ZONE_LIST=$($CAT ./cloudflare_zone_list.json)
+    CLOUDFLARE_KV_NAMESPACES=$($CAT ./cloudflare_kv_namespaces_list.conf)
 fi
 
 [[ -z "${INFLUXDB_HOST}" ]] && echo >&2 "INFLUXDB_HOST is empty. Aborting" && exit 1
@@ -42,6 +45,7 @@ fi
 RFC_CURRENT_DATE=$($DATE --rfc-3339=date)
 ISO_CURRENT_DATE_TIME=$($DATE --iso-8601=seconds)
 ISO_CURRENT_DATE_TIME_1H_AGO=$($DATE --iso-8601=seconds --date "1 hour ago")
+ISO_CURRENT_DATE_TIME_2H_AGO=$($DATE --iso-8601=seconds --date "2 hour ago")
 INFLUXDB_URL="https://$INFLUXDB_HOST/api/v2/write?precision=s&org=$ORG&bucket=$BUCKET"
 CF_URL="https://api.cloudflare.com/client/v4/graphql"
 
@@ -363,5 +367,171 @@ if [[ $cf_nb_invocations -gt 0 ]]; then
             --header "Content-Type: text/plain; charset=utf-8" \
             --header "Accept: application/json" \
             --data-binary @-
+
+fi
+
+if [[ -n "${CLOUDFLARE_KV_NAMESPACES}" ]]; then
+
+    for kv_namespace_id in $(echo "${CLOUDFLARE_KV_NAMESPACES}"); do
+        KV_GRAPHQL_QUERY=$(
+            cat <<END_HEREDOC
+{ "query":
+  "query {
+    viewer {
+        accounts(filter: { accountTag: \$accountTag }) {
+            kvOperationsAdaptiveGroups(
+                filter: { namespaceId: \$namespaceId, datetimeHour_geq: \$datetimeStart, datetimeHour_leq: \$datetimeEnd }
+                limit: 10000
+            ) {
+                sum {
+                    objectBytes
+                    requests
+                }
+                quantiles {
+                    latencyMsP50
+                    latencyMsP99
+                }
+                dimensions {
+                    actionType
+                    datetimeHour
+                    namespaceId
+                    responseStatusCode
+                    result
+                }
+            }
+        }
+    }
+}",
+  "variables": {
+    "accountTag": "$CLOUDFLARE_ACCOUNT_TAG",
+    "namespaceId": "$kv_namespace_id",
+    "datetimeStart": "$ISO_CURRENT_DATE_TIME_1H_AGO",
+    "datetimeEnd": "$ISO_CURRENT_DATE_TIME"
+  }
+}
+END_HEREDOC
+        )
+
+        cf_kv_json=$(
+            $CURL --silent --fail --show-error --compressed \
+                --request POST \
+                --header "Content-Type: application/json" \
+                --header "$CF_EMAIL_HEADER" \
+                --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                --data "$(echo -n $KV_GRAPHQL_QUERY)" \
+                "$CF_URL"
+        )
+
+        cf_kv_nb_errors=$(echo $cf_kv_json | $JQ ".errors | length")
+
+        if [[ $cf_kv_nb_errors -gt 0 ]]; then
+            cf_kv_errors=$(echo $cf_kv_json | $JQ --raw-output ".errors[] | .message")
+            printf "Cloudflare API request failed with: \n%s\nAborting\n" "$cf_kv_errors" >&2
+            exit 1
+        fi
+
+        cf_kv_json_parsed=$(echo $cf_kv_json | $JQ ".data.viewer.accounts[0].kvOperationsAdaptiveGroups")
+        cf_stats_kv=$(
+            echo "$cf_kv_json_parsed" |
+                $JQ --raw-output "
+        (.[] |
+        [\"${CLOUDFLARE_ACCOUNT_TAG}\",
+        .dimensions.namespaceId,
+        .dimensions.actionType,
+        .dimensions.result,
+        .dimensions.responseStatusCode,
+        .quantiles.latencyMsP50,
+        .quantiles.latencyMsP99,
+        .sum.objectBytes,
+        .sum.requests,
+        (.dimensions.datetimeHour | fromdateiso8601)
+        ])
+        | @tsv" |
+                $AWK '{printf "cloudflare_stats_kv_ops,account=%s,namespace=%s actionType=\"%s\",result=\"%s\",responseStatusCode=%s,latencyMsP50=%s,latencyMsP99=%s,objectBytes=%s,requests=%s %s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}'
+        )
+
+        echo "$cf_stats_kv" | $GZIP |
+            $CURL --silent --fail --show-error \
+                --request POST "${INFLUXDB_URL}" \
+                --header 'Content-Encoding: gzip' \
+                --header "Authorization: Token $INFLUXDB_API_TOKEN" \
+                --header "Content-Type: text/plain; charset=utf-8" \
+                --header "Accept: application/json" \
+                --data-binary @-
+
+        KV_STORAGE_GRAPHQL_QUERY=$(
+            cat <<END_HEREDOC
+{ "query":
+  "query {
+    viewer {
+        accounts(filter: { accountTag: \$accountTag }) {
+            kvStorageAdaptiveGroups(
+                filter: { namespaceId: \$namespaceId, datetimeHour_geq: \$datetimeStart, datetimeHour_leq: \$datetimeEnd }
+                limit: 10000
+            ) {
+                max {
+                    keyCount
+                    byteCount
+                }
+                dimensions {
+                    datetimeHour
+                    namespaceId
+                }
+            }
+        }
+    }
+}",
+  "variables": {
+    "accountTag": "$CLOUDFLARE_ACCOUNT_TAG",
+    "namespaceId": "$kv_namespace_id",
+    "datetimeStart": "$ISO_CURRENT_DATE_TIME_2H_AGO",
+    "datetimeEnd": "$ISO_CURRENT_DATE_TIME"
+  }
+}
+END_HEREDOC
+        )
+
+        cf_kv_storage_json=$(
+            $CURL --silent --fail --show-error --compressed \
+                --request POST \
+                --header "Content-Type: application/json" \
+                --header "$CF_EMAIL_HEADER" \
+                --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                --data "$(echo -n $KV_STORAGE_GRAPHQL_QUERY)" \
+                "$CF_URL"
+        )
+
+        cf_kv_storage_nb_errors=$(echo $cf_kv_storage_json | $JQ ".errors | length")
+
+        if [[ $cf_kv_storage_nb_errors -gt 0 ]]; then
+            cf_kv_storage_errors=$(echo $cf_kv_storage_json | $JQ --raw-output ".errors[] | .message")
+            printf "Cloudflare API request failed with: \n%s\nAborting\n" "$cf_kv_storage_errors" >&2
+            exit 1
+        fi
+
+        cf_kv_storage_json_parsed=$(echo $cf_kv_storage_json | $JQ ".data.viewer.accounts[0].kvStorageAdaptiveGroups")
+        cf_stats_kv_storage=$(
+            echo "$cf_kv_storage_json_parsed" |
+                $JQ --raw-output "
+        (.[] |
+        [\"${CLOUDFLARE_ACCOUNT_TAG}\",
+        .dimensions.namespaceId,
+        .max.byteCount,
+        .max.keyCount,
+        (.dimensions.datetimeHour | fromdateiso8601)
+        ])
+        | @tsv" |
+                $AWK '{printf "cloudflare_stats_kv_storage,account=%s,namespace=%s byteCount=%s,keyCount=%s %s\n", $1, $2, $3, $4, $5}'
+        )
+
+        echo "$cf_stats_kv_storage" | $GZIP |
+            $CURL --silent --fail --show-error \
+                --request POST "${INFLUXDB_URL}" \
+                --header 'Content-Encoding: gzip' \
+                --header "Authorization: Token $INFLUXDB_API_TOKEN" \
+                --header "Content-Type: text/plain; charset=utf-8" \
+                --header "Accept: application/json" \
+                --data-binary @-
+    done
 
 fi

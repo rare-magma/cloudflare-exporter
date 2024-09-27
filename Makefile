@@ -6,6 +6,7 @@ install:
 	&& chmod +x $${HOME}/.local/bin/cloudflare_exporter.sh \
 	&& cp --no-clobber cloudflare_exporter.conf $${HOME}/.config/cloudflare_exporter.conf \
 	&& cp --no-clobber cloudflare_zone_list.json $${HOME}/.config/cloudflare_zone_list.json \
+	&& cp --no-clobber cloudflare_kv_namespaces_list.conf $${HOME}/.config/cloudflare_kv_namespaces_list.conf \
 	&& chmod 400 $${HOME}/.config/cloudflare_exporter.conf \
 	&& cp cloudflare-exporter.timer $${HOME}/.config/systemd/user/ \
 	&& cp cloudflare-exporter.service $${HOME}/.config/systemd/user/ \
@@ -16,6 +17,7 @@ uninstall:
 	@rm -f $${HOME}/.local/bin/cloudflare_exporter.sh \
 	&& rm -f $${HOME}/.config/cloudflare_exporter.conf \
 	&& rm -f $${HOME}/.config/cloudflare_zone_list.json \
+	&& rm -f $${HOME}/.config/cloudflare_kv_namespaces_list.conf \
 	&& systemctl --user disable --now cloudflare-exporter.timer \
 	&& rm -f $${HOME}/.config/.config/systemd/user/cloudflare-exporter.timer \
 	&& rm -f $${HOME}/.config/systemd/user/cloudflare-exporter.service

@@ -35,5 +35,6 @@ services:
     volumes:
       - ./cloudflare_exporter.conf:/app/cloudflare_exporter.conf:ro
       - ./cloudflare_zone_list.json:/app/cloudflare_zone_list.json:ro
+      - ./cloudflare_kv_namespaces_list.conf:/app/cloudflare_kv_namespaces_list.conf:ro
     labels:
       net.reddec.scheduler.cron: "5 * * * *"

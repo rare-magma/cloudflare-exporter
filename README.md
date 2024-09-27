@@ -46,11 +46,11 @@ Bash script that uploads the Cloudflare Analytics API data to influxdb on an hou
    docker build . --tag cloudflare-exporter
    ```
 
-1. Configure `cloudflare_exporter.conf` and `cloudflare_zone_list.json` (see the configuration section below).
+1. Configure `cloudflare_exporter.conf`, `cloudflare_zone_list.json` and `cloudflare_kv_namespaces.conf` (see the configuration section below).
 1. Run it.
 
    ```bash
-    docker run --rm --init --tty --interactive --read-only --cap-drop ALL --security-opt no-new-privileges:true --cpus 2 -m 64m --pids-limit 16 --volume ./cloudflare_exporter.conf:/app/cloudflare_exporter.conf:ro --volume ./cloudflare_zone_list.json:/app/cloudflare_zone_list.json:ro ghcr.io/rare-magma/cloudflare-exporter:latest
+    docker run --rm --init --tty --interactive --read-only --cap-drop ALL --security-opt no-new-privileges:true --cpus 2 -m 64m --pids-limit 16 --volume ./cloudflare_exporter.conf:/app/cloudflare_exporter.conf:ro --volume ./cloudflare_zone_list.json:/app/cloudflare_zone_list.json:ro --volume ./cloudflare_kv_namespaces_list.conf:/app/cloudflare_kv_namespaces_list.conf:ro ghcr.io/rare-magma/cloudflare-exporter:latest
     ```
 
 ### With the Makefile
@@ -61,13 +61,14 @@ For convenience, you can install this exporter with the following command or fol
 make install
 $EDITOR $HOME/.config/cloudflare_exporter.conf
 $EDITOR $HOME/.config/cloudflare_zone_list.json
+$EDITOR $HOME/.config/cloudflare_kv_namespaces_list.conf
 ```
 
 ### Manually
 
 1. Copy `cloudflare_exporter.sh` to `$HOME/.local/bin/` and make it executable.
 
-2. Copy `cloudflare_exporter.conf` and `cloudflare_zone_list.json` to `$HOME/.config/`, configure them (see the configuration section below) and make them read only.
+2. Copy `cloudflare_exporter.conf`, `cloudflare_zone_list.json` and `cloudflare_kv_namespaces_list.conf` to `$HOME/.config/`, configure them (see the configuration section below) and make them read only.
 
 3. Copy the systemd unit and timer to `$HOME/.config/systemd/user/`:
 
@@ -124,6 +125,15 @@ The zone list file should contain a list of zone ids and domain names in json fo
 ]
 ```
 
+### KV namespaces list file
+
+The KV namespaces list file is optional and should contain a KV namespace id per line:
+
+```plaintext
+999999aba99dd9999ef99ab78965ab1c
+111111aba11dd1111ef11ab11111ab1c
+```
+
 ## Troubleshooting
 
 Run the script manually with bash set to trace:
@@ -148,6 +158,8 @@ systemctl --user list-timers
 - cloudflare_stats_responses: Request statistics broken down by response status code
 - cloudflare_stats: General request statistics
 - cloudflare_stats_workers: Workers statistics grouped by hour
+- cloudflare_stats_kv_ops: KV operation statistics grouped by hour
+- cloudflare_stats_kv_storage: KV storage statistics
 
 ## Exported metrics example
 
@@ -159,6 +171,8 @@ cloudflare_stats_ip,zone="example.com",ipType="searchEngine" requests=21 1703894
 cloudflare_stats_responses,zone="example.com",status=403 requests=1 1703894400
 cloudflare_stats,zone="example.com" bytes=2032039,cachedBytes=40607,cachedRequests=17,encryptedBytes=2020727,encryptedRequests=251,pageViews=178,requests=266,threats=0,uniqueVisitors=2 1703894400'
 cloudflare_stats_workers,account=aa0a0aa000a0000aa00a00aa0e000a0a,worker=worker-name status="scriptThrewException",cpuTimeP50=1246,cpuTimeP99=1246,durationP50=0.001246,durationP99=0.001246,responseBodySizeP50=0,responseBodySizeP99=0,wallTimeP50=1605,wallTimeP99=1605,clientDisconnects=0,cpuTimeUs=1246,duration=0.001246,errors=1,requests=1,responseBodySize=0,subrequests=0,wallTime=1605 1727340566
+cloudflare_stats_kv_ops,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c actionType="read",result="hot_read",responseStatusCode=200,latencyMsP50=116,latencyMsP99=116,objectBytes=1737,requests=1 1727445600
+cloudflare_stats_kv_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c byteCount=5369,keyCount=1 1727442000
 ```
 
 ## Example grafana dashboard
@@ -197,6 +211,7 @@ Delete the following files:
 ~/.local/bin/cloudflare_exporter.sh
 ~/.config/cloudflare_exporter.conf
 ~/.config/cloudflare_zone_list.json
+~/.config/cloudflare_kv_namespaces_list.conf
 ~/.config/systemd/user/cloudflare-exporter.timer
 ~/.config/systemd/user/cloudflare-exporter.service
 ```

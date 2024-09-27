@@ -6,6 +6,7 @@ After=network-online.target
 ExecStart=/home/%u/.local/bin/cloudflare_exporter.sh
 LoadCredential=creds:/home/%u/.config/cloudflare_exporter.conf
 LoadCredential=list:/home/%u/.config/cloudflare_zone_list.json
+LoadCredential=namespaces_list:/home/%u/.config/cloudflare_kv_namespaces_list.conf
 Type=oneshot
 
 # Security hardening options
