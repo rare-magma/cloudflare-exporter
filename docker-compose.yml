@@ -19,7 +19,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   cloudflare-exporter:
-    image: cloudflare-exporter:latest
+    image: ghcr.io/rare-magma/cloudflare-exporter:latest
     init: true
     read_only: true
     cap_drop:
