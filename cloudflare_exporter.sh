@@ -2,7 +2,7 @@
 
 set -Eeo pipefail
 
-dependencies=(cat curl date gzip jq)
+dependencies=(awk cat curl date gzip jq)
 for program in "${dependencies[@]}"; do
     command -v "$program" >/dev/null 2>&1 || {
         echo >&2 "Couldn't find dependency: $program. Aborting."
@@ -10,6 +10,7 @@ for program in "${dependencies[@]}"; do
     }
 done
 
+AWK=$(command -v awk)
 CAT=$(command -v cat)
 CURL=$(command -v curl)
 DATE=$(command -v date)
@@ -19,10 +20,13 @@ JQ=$(command -v jq)
 if [[ "${RUNNING_IN_DOCKER}" ]]; then
     source "/app/cloudflare_exporter.conf"
     CLOUDFLARE_ZONE_LIST=$($CAT /app/cloudflare_zone_list.json)
-else
+elif [[ -f $CREDENTIALS_DIRECTORY/creds ]]; then
     #shellcheck source=/dev/null
     source "$CREDENTIALS_DIRECTORY/creds"
     CLOUDFLARE_ZONE_LIST=$($CAT $CREDENTIALS_DIRECTORY/list)
+else
+    source "./cloudflare_exporter.conf"
+    CLOUDFLARE_ZONE_LIST=$($CAT ./cloudflare_zone_list.json)
 fi
 
 [[ -z "${INFLUXDB_HOST}" ]] && echo >&2 "INFLUXDB_HOST is empty. Aborting" && exit 1
@@ -31,10 +35,13 @@ fi
 [[ -z "${BUCKET}" ]] && echo >&2 "BUCKET is empty. Aborting" && exit 1
 [[ -z "${CLOUDFLARE_API_TOKEN}" ]] && echo >&2 "CLOUDFLARE_API_TOKEN is empty. Aborting" && exit 1
 [[ -z "${CLOUDFLARE_ZONE_LIST}" ]] && echo >&2 "CLOUDFLARE_ZONE_LIST is empty. Aborting" && exit 1
+[[ -z "${CLOUDFLARE_ACCOUNT_TAG}" ]] && echo >&2 "CLOUDFLARE_ACCOUNT_TAG is empty. Aborting" && exit 1
 [[ $(echo "${CLOUDFLARE_ZONE_LIST}" | $JQ type 1>/dev/null) ]] && echo >&2 "CLOUDFLARE_ZONE_LIST is not valid JSON. Aborting" && exit 1
 [[ -n "${CLOUDFLARE_ACCOUNT_EMAIL}" ]] && CF_EMAIL_HEADER="X-Auth-Email: ${CLOUDFLARE_ACCOUNT_EMAIL}"
 
 RFC_CURRENT_DATE=$($DATE --rfc-3339=date)
+ISO_CURRENT_DATE_TIME=$($DATE --iso-8601=seconds)
+ISO_CURRENT_DATE_TIME_1H_AGO=$($DATE --iso-8601=seconds --date "1 hour ago")
 INFLUXDB_URL="https://$INFLUXDB_HOST/api/v2/write?precision=s&org=$ORG&bucket=$BUCKET"
 CF_URL="https://api.cloudflare.com/client/v4/graphql"
 
@@ -248,3 +255,113 @@ END_HEREDOC
                 --data-binary @-
     fi
 done
+
+WORKERS_GRAPHQL_QUERY=$(
+    cat <<END_HEREDOC
+{ "query":
+  "query GetWorkersAnalytics(\$accountTag: string, \$datetimeStart: string, \$datetimeEnd: string) {
+    viewer {
+      accounts(filter: {accountTag: \$accountTag}) {
+        workersInvocationsAdaptive(limit: 100, filter: {
+          datetime_geq: \$datetimeStart,
+          datetime_leq: \$datetimeEnd
+        }) {
+          sum {
+            clientDisconnects
+            cpuTimeUs
+            duration
+            errors
+            requests
+            subrequests
+            responseBodySize
+            wallTime
+          }
+          quantiles {
+            cpuTimeP50
+            cpuTimeP99
+            durationP50
+            durationP99
+            responseBodySizeP50
+            responseBodySizeP99
+            wallTimeP50
+            wallTimeP99
+          }
+          dimensions{
+            datetimeHour
+            scriptName
+            status
+          }
+        }
+      }
+    }
+  }",
+  "variables": {
+    "accountTag": "$CLOUDFLARE_ACCOUNT_TAG",
+    "datetimeStart": "$ISO_CURRENT_DATE_TIME_1H_AGO",
+    "datetimeEnd": "$ISO_CURRENT_DATE_TIME"
+  }
+}
+END_HEREDOC
+)
+
+cf_workers_json=$(
+    $CURL --silent --fail --show-error --compressed \
+        --request POST \
+        --header "Content-Type: application/json" \
+        --header "$CF_EMAIL_HEADER" \
+        --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        --data "$(echo -n $WORKERS_GRAPHQL_QUERY)" \
+        "$CF_URL"
+)
+
+cf_workers_nb_errors=$(echo $cf_workers_json | $JQ ".errors | length")
+
+if [[ $cf_workers_nb_errors -gt 0 ]]; then
+    cf_workers_errors=$(echo $cf_workers_json | $JQ --raw-output ".errors[] | .message")
+    printf "Cloudflare API request failed with: \n%s\nAborting\n" "$cf_workers_errors" >&2
+    exit 1
+fi
+
+cf_nb_invocations=$(echo $cf_workers_json | $JQ ".data.viewer.accounts[0].workersInvocationsAdaptive | length")
+
+if [[ $cf_nb_invocations -gt 0 ]]; then
+    cf_workers_json_parsed=$(echo $cf_workers_json | $JQ ".data.viewer.accounts[0].workersInvocationsAdaptive")
+    cf_stats_workers=$(
+        echo "$cf_workers_json_parsed" |
+            $JQ --raw-output "
+        (.[] |
+        [\"${CLOUDFLARE_ACCOUNT_TAG}\",
+        .dimensions.scriptName,
+        .dimensions.status,
+        .quantiles.cpuTimeP50,
+        .quantiles.cpuTimeP99,
+        .quantiles.durationP50,
+        .quantiles.durationP99,
+        .quantiles.responseBodySizeP50,
+        .quantiles.responseBodySizeP99,
+        .quantiles.wallTimeP50,
+        .quantiles.wallTimeP99,
+        .sum.clientDisconnects,
+        .sum.cpuTimeUs,
+        .sum.duration,
+        .sum.errors,
+        .sum.requests,
+        .sum.responseBodySize,
+        .sum.subrequests,
+        .sum.wallTime,
+        (.dimensions.datetimeHour | fromdateiso8601)
+        ])
+        | @tsv" |
+            $AWK '{printf "cloudflare_stats_workers,account=%s,worker=%s status=\"%s\",cpuTimeP50=%s,cpuTimeP99=%s,durationP50=%s,durationP99=%s,responseBodySizeP50=%s,responseBodySizeP99=%s,wallTimeP50=%s,wallTimeP99=%s,clientDisconnects=%s,cpuTimeUs=%s,duration=%s,errors=%s,requests=%s,responseBodySize=%s,subrequests=%s,wallTime=%s %s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20}'
+    )
+
+    echo "$cf_stats_workers" | $GZIP |
+        $CURL --silent --fail --show-error \
+            --request POST "${INFLUXDB_URL}" \
+            --header 'Content-Encoding: gzip' \
+            --header "Authorization: Token $INFLUXDB_API_TOKEN" \
+            --header "Content-Type: text/plain; charset=utf-8" \
+            --header "Accept: application/json" \
+            --data-binary @-
+
+fi

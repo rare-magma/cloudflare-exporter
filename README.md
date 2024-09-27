@@ -4,6 +4,7 @@ Bash script that uploads the Cloudflare Analytics API data to influxdb on an hou
 
 ## Dependencies
 
+- [awk](https://www.gnu.org/software/gawk/manual/gawk.html)
 - [bash](https://www.gnu.org/software/bash/)
 - [coreutils (cat)](https://www.gnu.org/software/coreutils/)
 - [coreutils (date)](https://www.gnu.org/software/coreutils/)
@@ -97,6 +98,7 @@ ORG='home'
 BUCKET='cloudflare'
 CLOUDFLARE_API_TOKEN='ZXhhbXBsZXRva2VuZXhhcXdzZGFzZGptcW9kcXdvZGptcXdvZHF3b2RqbXF3ZHFhc2RhCg=='
 CLOUDFLARE_ACCOUNT_EMAIL='email@example.com'
+CLOUDFLARE_ACCOUNT_TAG='aa0a0aa000a0000aa00a00aa0e000a0a'
 ```
 
 - `INFLUXDB_HOST` should be the FQDN of the influxdb server.
@@ -106,6 +108,8 @@ CLOUDFLARE_ACCOUNT_EMAIL='email@example.com'
   - This token should have write access to the `BUCKET` defined above.
 - `CLOUDFLARE_API_TOKEN` should be the cloudflare API token value.
   - This token should be assigned the `All zones - Analytics:Read` permission.
+  - Additionally, the `Account Analytics:Read` permission is necessary for workers metrics.
+- `CLOUDFLARE_ACCOUNT_TAG` should be the tag associated with the cloudflare account.
 - Required for cloudflare accounts on a paid plan:
   - `CLOUDFLARE_ACCOUNT_EMAIL` should be the email associated with the paid cloudflare account.
 
@@ -143,6 +147,7 @@ systemctl --user list-timers
 - cloudflare_stats_ip: Request statistics broken down by robot type
 - cloudflare_stats_responses: Request statistics broken down by response status code
 - cloudflare_stats: General request statistics
+- cloudflare_stats_workers: Workers statistics grouped by hour
 
 ## Exported metrics example
 
@@ -153,6 +158,7 @@ cloudflare_stats_countries,zone="example.com",country="CA" bytes=312170,requests
 cloudflare_stats_ip,zone="example.com",ipType="searchEngine" requests=21 1703894400
 cloudflare_stats_responses,zone="example.com",status=403 requests=1 1703894400
 cloudflare_stats,zone="example.com" bytes=2032039,cachedBytes=40607,cachedRequests=17,encryptedBytes=2020727,encryptedRequests=251,pageViews=178,requests=266,threats=0,uniqueVisitors=2 1703894400'
+cloudflare_stats_workers,account=aa0a0aa000a0000aa00a00aa0e000a0a,worker=worker-name status="scriptThrewException",cpuTimeP50=1246,cpuTimeP99=1246,durationP50=0.001246,durationP99=0.001246,responseBodySizeP50=0,responseBodySizeP99=0,wallTimeP50=1605,wallTimeP99=1605,clientDisconnects=0,cpuTimeUs=1246,duration=0.001246,errors=1,requests=1,responseBodySize=0,subrequests=0,wallTime=1605 1727340566
 ```
 
 ## Example grafana dashboard
