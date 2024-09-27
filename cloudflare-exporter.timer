@@ -2,7 +2,7 @@
 Description=Cloudflare Exporter Timer
 
 [Timer]
-OnCalendar=*-*-* 23:55:00
+OnCalendar=*-*-* *:05:00
 
 [Install]
 WantedBy=timers.target
