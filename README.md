@@ -158,6 +158,7 @@ systemctl --user list-timers
 - cloudflare_stats_responses: Request statistics broken down by response status code
 - cloudflare_stats: General request statistics
 - cloudflare_stats_workers: Workers statistics grouped by hour
+- cloudflare_stats_pf: Pages Functions statistics grouped by hour
 - cloudflare_stats_kv_ops: KV operation statistics grouped by hour
 - cloudflare_stats_kv_storage: KV storage statistics
 
@@ -171,6 +172,7 @@ cloudflare_stats_ip,zone="example.com",ipType="searchEngine" requests=21 1703894
 cloudflare_stats_responses,zone="example.com",status=403 requests=1 1703894400
 cloudflare_stats,zone="example.com" bytes=2032039,cachedBytes=40607,cachedRequests=17,encryptedBytes=2020727,encryptedRequests=251,pageViews=178,requests=266,threats=0,uniqueVisitors=2 1703894400
 cloudflare_stats_workers,account=aa0a0aa000a0000aa00a00aa0e000a0a,worker=worker-name status="scriptThrewException",cpuTimeP50=1246,cpuTimeP99=1246,durationP50=0.001246,durationP99=0.001246,responseBodySizeP50=0,responseBodySizeP99=0,wallTimeP50=1605,wallTimeP99=1605,clientDisconnects=0,cpuTimeUs=1246,duration=0.001246,errors=1,requests=1,responseBodySize=0,subrequests=0,wallTime=1605 1727340566
+cloudflare_stats_pf,account=aa0a0aa000a0000aa00a00aa0e000a0a,scriptName=pages-worker--1111111-production status="success",usageModel="standard",cpuTimeP50=3492,cpuTimeP99=3700,durationP50=0.004010875,durationP99=0.016313376,clientDisconnects=0,duration=0.024276250000000003,errors=0,requests=3,responseBodySize=4614,subrequests=0,wallTime=194210 1727431200
 cloudflare_stats_kv_ops,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c actionType="read",result="hot_read",responseStatusCode=200,latencyMsP50=116,latencyMsP99=116,objectBytes=1737,requests=1 1727445600
 cloudflare_stats_kv_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c byteCount=5369,keyCount=1 1727442000
 ```

@@ -370,6 +370,107 @@ if [[ $cf_nb_invocations -gt 0 ]]; then
 
 fi
 
+PAGES_FUNCTIONS_GRAPHQL_QUERY=$(
+    cat <<END_HEREDOC
+{ "query":
+  "query {
+    viewer {
+        accounts(filter: { accountTag: \$accountTag }) {
+            pagesFunctionsInvocationsAdaptiveGroups(
+                filter: { datetimeHour_geq: \$datetimeStart, datetimeHour_leq: \$datetimeEnd }
+                limit: 10000
+            ) {
+                sum {
+                    clientDisconnects
+                    duration
+                    errors
+                    requests
+                    responseBodySize
+                    subrequests
+                    wallTime
+                }
+                quantiles {
+                    cpuTimeP50
+                    cpuTimeP99
+                    durationP50
+                    durationP99
+                }
+                dimensions {
+                    datetimeHour
+                    scriptName
+                    status
+                    usageModel
+                }
+            }
+        }
+    }
+}",
+  "variables": {
+    "accountTag": "$CLOUDFLARE_ACCOUNT_TAG",
+    "datetimeStart": "$ISO_CURRENT_DATE_TIME_1H_AGO",
+    "datetimeEnd": "$ISO_CURRENT_DATE_TIME"
+  }
+}
+END_HEREDOC
+)
+
+cf_pf_json=$(
+    $CURL --silent --fail --show-error --compressed \
+        --request POST \
+        --header "Content-Type: application/json" \
+        --header "$CF_EMAIL_HEADER" \
+        --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        --data "$(echo -n $PAGES_FUNCTIONS_GRAPHQL_QUERY)" \
+        "$CF_URL"
+)
+
+cf_pf_nb_errors=$(echo $cf_pf_json | $JQ ".errors | length")
+
+if [[ $cf_pf_nb_errors -gt 0 ]]; then
+    cf_pf_errors=$(echo $cf_pf_json | $JQ --raw-output ".errors[] | .message")
+    printf "Cloudflare API request failed with: \n%s\nAborting\n" "$cf_pf_errors" >&2
+    exit 1
+fi
+
+cf_pf_nb_invocations=$(echo $cf_pf_json | $JQ ".data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups | length")
+
+if [[ $cf_pf_nb_invocations -gt 0 ]]; then
+    cf_pf_json_parsed=$(echo $cf_pf_json | $JQ ".data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups")
+    cf_stats_pf=$(
+        echo "$cf_pf_json_parsed" |
+            $JQ --raw-output "
+        (.[] |
+        [\"${CLOUDFLARE_ACCOUNT_TAG}\",
+        .dimensions.scriptName,
+        .dimensions.status,
+        .dimensions.usageModel,
+        .quantiles.cpuTimeP50,
+        .quantiles.cpuTimeP99,
+        .quantiles.durationP50,
+        .quantiles.durationP99,
+        .sum.clientDisconnects,
+        .sum.duration,
+        .sum.errors,
+        .sum.requests,
+        .sum.responseBodySize,
+        .sum.subrequests,
+        .sum.wallTime,
+        (.dimensions.datetimeHour | fromdateiso8601)
+        ])
+        | @tsv" |
+            $AWK '{printf "cloudflare_stats_pf,account=%s,scriptName=%s status=\"%s\",usageModel=\"%s\",cpuTimeP50=%s,cpuTimeP99=%s,durationP50=%s,durationP99=%s,clientDisconnects=%s,duration=%s,errors=%s,requests=%s,responseBodySize=%s,subrequests=%s,wallTime=%s %s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16}'
+    )
+
+    echo "$cf_stats_pf" | $GZIP |
+        $CURL --silent --fail --show-error \
+            --request POST "${INFLUXDB_URL}" \
+            --header 'Content-Encoding: gzip' \
+            --header "Authorization: Token $INFLUXDB_API_TOKEN" \
+            --header "Content-Type: text/plain; charset=utf-8" \
+            --header "Accept: application/json" \
+            --data-binary @-
+fi
+
 if [[ -n "${CLOUDFLARE_KV_NAMESPACES}" ]]; then
 
     for kv_namespace_id in $(echo "${CLOUDFLARE_KV_NAMESPACES}"); do
