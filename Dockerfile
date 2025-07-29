@@ -1,4 +1,4 @@
-FROM docker.io/library/alpine:3.22.0
+FROM docker.io/library/alpine:3.22.1
 ENV RUNNING_IN_DOCKER=true
 ENTRYPOINT ["/bin/bash"]
 CMD ["/app/cloudflare_exporter.sh"]
