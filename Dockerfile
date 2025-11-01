@@ -1,9 +1,14 @@
-FROM docker.io/library/alpine:3.22
-ENV RUNNING_IN_DOCKER=true
-ENTRYPOINT ["/bin/bash"]
-CMD ["/app/cloudflare_exporter.sh"]
-COPY cloudflare_exporter.sh /app/cloudflare_exporter.sh
-RUN addgroup -g 10001 user \
-    && adduser -H -D -u 10000 -G user user
-RUN apk add --quiet --no-cache bash coreutils curl jq
-USER user:user
+FROM --platform=$BUILDPLATFORM docker.io/library/golang:alpine AS builder
+WORKDIR /app
+ENV CGO_ENABLED=0
+
+COPY main.go go.mod ./
+
+RUN for arch in amd64 arm64; do \
+      GOOS=linux GOARCH=$arch go build -ldflags "-s -w" -trimpath -o app-$arch main.go; \
+    done
+
+FROM cgr.dev/chainguard/static:latest
+ARG TARGETARCH
+COPY --from=builder /app/app-${TARGETARCH} /usr/bin/app
+ENTRYPOINT ["/usr/bin/app"]
