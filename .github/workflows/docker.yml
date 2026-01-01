@@ -38,6 +38,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew install cosign
+
           IMAGE="${REGISTRY}/${IMAGE_NAME}:latest"
           CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -54,6 +57,8 @@ jobs:
           buildah manifest push --all "${IMAGE}" "docker://${IMAGE}"
           DIGEST="$(skopeo inspect docker://${IMAGE} | jq -r .Digest)"
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+          cosign sign --yes "${IMAGE}@${DIGEST}"
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # ratchet:actions/attest-build-provenance@v2
