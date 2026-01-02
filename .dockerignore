@@ -1,9 +1,3 @@
-.github/
-*.conf
-*.png
-*.json
-*.service
-*.timer
-*.yml
-Makefile
-*.md
+*
+.*
+!cloudflare_exporter.sh
