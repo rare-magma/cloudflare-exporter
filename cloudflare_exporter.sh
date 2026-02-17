@@ -58,7 +58,7 @@ for i in $(seq 0 "$nb_zones"); do
     cf_zone_domain="${cf_zone[1]}"
 
     GRAPHQL_QUERY=$(
-        cat <<END_HEREDOC
+        $CAT <<END_HEREDOC
 { "query":
   "query {
     viewer {
@@ -257,11 +257,12 @@ END_HEREDOC
                 --header "Content-Type: text/plain; charset=utf-8" \
                 --header "Accept: application/json" \
                 --data-binary @-
+     fi
     fi
 done
 
 WORKERS_GRAPHQL_QUERY=$(
-    cat <<END_HEREDOC
+    $CAT <<END_HEREDOC
 { "query":
   "query GetWorkersAnalytics(\$accountTag: string, \$datetimeStart: string, \$datetimeEnd: string) {
     viewer {
@@ -371,7 +372,7 @@ if [[ $cf_nb_invocations -gt 0 ]]; then
 fi
 
 PAGES_FUNCTIONS_GRAPHQL_QUERY=$(
-    cat <<END_HEREDOC
+    $CAT <<END_HEREDOC
 { "query":
   "query {
     viewer {
@@ -475,7 +476,7 @@ if [[ -n "${CLOUDFLARE_KV_NAMESPACES}" ]]; then
 
     for kv_namespace_id in $(echo "${CLOUDFLARE_KV_NAMESPACES}"); do
         KV_GRAPHQL_QUERY=$(
-            cat <<END_HEREDOC
+            $CAT <<END_HEREDOC
 { "query":
   "query {
     viewer {
@@ -561,7 +562,7 @@ END_HEREDOC
                 --data-binary @-
 
         KV_STORAGE_GRAPHQL_QUERY=$(
-            cat <<END_HEREDOC
+            $CAT <<END_HEREDOC
 { "query":
   "query {
     viewer {
