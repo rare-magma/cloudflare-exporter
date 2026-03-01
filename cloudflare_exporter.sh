@@ -257,7 +257,6 @@ END_HEREDOC
                 --header "Content-Type: text/plain; charset=utf-8" \
                 --header "Accept: application/json" \
                 --data-binary @-
-     fi
     fi
 done
 
