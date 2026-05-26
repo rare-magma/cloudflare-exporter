@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.22
+FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.23.4
 ENV RUNNING_IN_DOCKER=true
 ENTRYPOINT ["/bin/bash"]
 CMD ["/app/cloudflare_exporter.sh"]
