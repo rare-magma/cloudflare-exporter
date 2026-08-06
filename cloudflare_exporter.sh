@@ -678,6 +678,8 @@ if [[ $cf_billable_usage_count -gt 0 ]]; then
                     number_field("consumedQuantity"; $row.ConsumedQuantity),
                     number_field("pricingQuantity"; $row.PricingQuantity),
                     number_field("contractedCost"; $row.ContractedCost),
+                    number_field("billedCost"; $row.BilledCost),
+                    number_field("effectiveCost"; $row.EffectiveCost),
                     number_field("cumulatedPricingQuantity"; $row.CumulatedPricingQuantity),
                     number_field("cumulatedContractedCost"; $row.CumulatedContractedCost)
                 ] | map(select(. != "")) | join(",") as $fields |

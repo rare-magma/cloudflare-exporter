@@ -178,7 +178,7 @@ cloudflare_stats_workers,account=aa0a0aa000a0000aa00a00aa0e000a0a,worker=worker-
 cloudflare_stats_pf,account=aa0a0aa000a0000aa00a00aa0e000a0a,scriptName=pages-worker--1111111-production status="success",usageModel="standard",cpuTimeP50=3492,cpuTimeP99=3700,durationP50=0.004010875,durationP99=0.016313376,clientDisconnects=0,duration=0.024276250000000003,errors=0,requests=3,responseBodySize=4614,subrequests=0,wallTime=194210 1727431200
 cloudflare_stats_kv_ops,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c actionType="read",result="hot_read",responseStatusCode=200,latencyMsP50=116,latencyMsP99=116,objectBytes=1737,requests=1 1727445600
 cloudflare_stats_kv_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c byteCount=5369,keyCount=1 1727442000
-cloudflare_billable_usage,account=aa0a0aa000a0000aa00a00aa0e000a0a,billingCurrency=USD,service=Workers\ Standard,serviceFamily=Workers,consumedUnit=GB-months consumedQuantity=150000,pricingQuantity=150000,contractedCost=0.75,cumulatedPricingQuantity=0,cumulatedContractedCost=2.25 1738368000
+cloudflare_billable_usage,account=aa0a0aa000a0000aa00a00aa0e000a0a,billingCurrency=USD,service=Workers\ Standard,serviceFamily=Workers,consumedUnit=GB-months consumedQuantity=150000,pricingQuantity=150000,contractedCost=0.75,billedCost=0,effectiveCost=0,cumulatedPricingQuantity=0,cumulatedContractedCost=2.25 1738368000
 ```
 
 ## Example grafana dashboard
