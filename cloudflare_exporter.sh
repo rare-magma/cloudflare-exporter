@@ -48,6 +48,7 @@ ISO_CURRENT_DATE_TIME_1H_AGO=$($DATE --iso-8601=seconds --date "1 hour ago")
 ISO_CURRENT_DATE_TIME_2H_AGO=$($DATE --iso-8601=seconds --date "2 hour ago")
 INFLUXDB_URL="https://$INFLUXDB_HOST/api/v2/write?precision=s&org=$ORG&bucket=$BUCKET"
 CF_URL="https://api.cloudflare.com/client/v4/graphql"
+CF_BILLABLE_USAGE_URL="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_TAG/billable-usage"
 
 nb_zones=$(echo "$CLOUDFLARE_ZONE_LIST" | $JQ 'length - 1')
 
@@ -635,4 +636,72 @@ END_HEREDOC
                 --data-binary @-
     done
 
+fi
+
+cf_billable_usage_json=$(
+    $CURL --silent --fail --show-error --compressed \
+        --header "$CF_EMAIL_HEADER" \
+        --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        "$CF_BILLABLE_USAGE_URL"
+)
+
+cf_billable_usage_success=$(echo "$cf_billable_usage_json" | $JQ --raw-output '.success')
+
+if [[ "$cf_billable_usage_success" != "true" ]]; then
+    cf_billable_usage_errors=$(echo "$cf_billable_usage_json" | $JQ --raw-output '.errors[]? | .message // tostring')
+    printf "Cloudflare Billable Usage API request failed with: \n%s\nAborting\n" "$cf_billable_usage_errors" >&2
+    exit 1
+fi
+
+cf_billable_usage_count=$(echo "$cf_billable_usage_json" | $JQ '.result | length')
+
+if [[ $cf_billable_usage_count -gt 0 ]]; then
+    cf_stats_billable_usage=$(
+        echo "$cf_billable_usage_json" |
+            $JQ --raw-output --arg account "$CLOUDFLARE_ACCOUNT_TAG" '
+                def escape_tag:
+                    gsub("\\\\"; "\\\\") |
+                    gsub(","; "\\,") |
+                    gsub(" "; "\\ ") |
+                    gsub("="; "\\=");
+                def tag($name; $value):
+                    $name + "=" + ($value | tostring | escape_tag);
+                def optional_tag($name; $value):
+                    if $value == null or $value == "" then "" else tag($name; $value) end;
+                def number_field($name; $value):
+                    ($value | try tonumber catch null) as $number |
+                    if $number == null then "" else $name + "=" + ($number | tostring) end;
+
+                .result[] |
+                . as $row |
+                [
+                    number_field("consumedQuantity"; $row.ConsumedQuantity),
+                    number_field("pricingQuantity"; $row.PricingQuantity),
+                    number_field("contractedCost"; $row.ContractedCost),
+                    number_field("cumulatedPricingQuantity"; $row.CumulatedPricingQuantity),
+                    number_field("cumulatedContractedCost"; $row.CumulatedContractedCost)
+                ] | map(select(. != "")) | join(",") as $fields |
+                select($fields != "") |
+                [
+                    tag("account"; $account),
+                    optional_tag("billingCurrency"; $row.BillingCurrency),
+                    optional_tag("service"; $row.ServiceName // $row.x_BillableMetricName),
+                    optional_tag("serviceFamily"; $row.ServiceFamilyName // $row.x_ProductFamilyName),
+                    optional_tag("consumedUnit"; $row.ConsumedUnit),
+                    optional_tag("zoneId"; $row.ZoneId // $row.x_ZoneId),
+                    optional_tag("zone"; $row.ZoneName // $row.x_ZoneName)
+                ] | map(select(. != "")) | join(",") as $tags |
+                ($row.ChargePeriodStart | fromdateiso8601) as $timestamp |
+                "cloudflare_billable_usage,\($tags) \($fields) \($timestamp)"
+            '
+    )
+
+    echo "$cf_stats_billable_usage" | $GZIP |
+        $CURL --silent --fail --show-error \
+            --request POST "${INFLUXDB_URL}" \
+            --header 'Content-Encoding: gzip' \
+            --header "Authorization: Token $INFLUXDB_API_TOKEN" \
+            --header "Content-Type: text/plain; charset=utf-8" \
+            --header "Accept: application/json" \
+            --data-binary @-
 fi

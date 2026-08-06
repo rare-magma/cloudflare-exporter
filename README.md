@@ -1,6 +1,6 @@
 # cloudflare-exporter
 
-Bash script that uploads the Cloudflare Analytics API data to influxdb on an hourly basis
+Bash script that uploads Cloudflare Analytics and Billable Usage API data to InfluxDB on an hourly basis.
 
 ## Dependencies
 
@@ -19,7 +19,8 @@ Bash script that uploads the Cloudflare Analytics API data to influxdb on an hou
 
 ## Relevant documentation
 
-- [Cloudflare API](https://developers.cloudflare.com/analytics/graphql-api/)
+- [Cloudflare Analytics API](https://developers.cloudflare.com/analytics/graphql-api/)
+- [Cloudflare Billable Usage API](https://developers.cloudflare.com/api/resources/billing/subresources/usage/methods/get/)
 - [Cloudflare GraphQL Schema](https://pages.johnspurlock.com/graphql-schema-docs/cloudflare.html)
 - [InfluxDB API](https://docs.influxdata.com/influxdb/v2.6/write-data/developer-tools/api/)
 - [Systemd Timers](https://www.freedesktop.org/software/systemd/man/systemd.timer.html)
@@ -110,6 +111,7 @@ CLOUDFLARE_ACCOUNT_TAG='aa0a0aa000a0000aa00a00aa0e000a0a'
 - `CLOUDFLARE_API_TOKEN` should be the cloudflare API token value.
   - This token should be assigned the `All zones - Analytics:Read` permission.
   - Additionally, the `Account Analytics:Read` permission is necessary for workers metrics.
+  - The `Billing Read` permission is necessary for billable usage metrics.
 - `CLOUDFLARE_ACCOUNT_TAG` should be the tag associated with the cloudflare account.
 - Required for cloudflare accounts on a paid plan:
   - `CLOUDFLARE_ACCOUNT_EMAIL` should be the email associated with the paid cloudflare account.
@@ -161,6 +163,7 @@ systemctl --user list-timers
 - cloudflare_stats_pf: Pages Functions statistics grouped by hour
 - cloudflare_stats_kv_ops: KV operation statistics grouped by hour
 - cloudflare_stats_kv_storage: KV storage statistics
+- cloudflare_billable_usage: Daily billable usage and costs grouped by service, service family, unit, and zone
 
 ## Exported metrics example
 
@@ -175,6 +178,7 @@ cloudflare_stats_workers,account=aa0a0aa000a0000aa00a00aa0e000a0a,worker=worker-
 cloudflare_stats_pf,account=aa0a0aa000a0000aa00a00aa0e000a0a,scriptName=pages-worker--1111111-production status="success",usageModel="standard",cpuTimeP50=3492,cpuTimeP99=3700,durationP50=0.004010875,durationP99=0.016313376,clientDisconnects=0,duration=0.024276250000000003,errors=0,requests=3,responseBodySize=4614,subrequests=0,wallTime=194210 1727431200
 cloudflare_stats_kv_ops,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c actionType="read",result="hot_read",responseStatusCode=200,latencyMsP50=116,latencyMsP99=116,objectBytes=1737,requests=1 1727445600
 cloudflare_stats_kv_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c byteCount=5369,keyCount=1 1727442000
+cloudflare_billable_usage,account=aa0a0aa000a0000aa00a00aa0e000a0a,billingCurrency=USD,service=Workers\ Standard,serviceFamily=Workers,consumedUnit=GB-months consumedQuantity=150000,pricingQuantity=150000,contractedCost=0.75,cumulatedPricingQuantity=0,cumulatedContractedCost=2.25 1738368000
 ```
 
 ## Example grafana dashboard
