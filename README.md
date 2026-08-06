@@ -20,7 +20,8 @@ Bash script that uploads Cloudflare Analytics and Billable Usage API data to Inf
 ## Relevant documentation
 
 - [Cloudflare Analytics API](https://developers.cloudflare.com/analytics/graphql-api/)
-- [Cloudflare Billable Usage API](https://developers.cloudflare.com/api/resources/billing/subresources/usage/methods/get/)
+- [Cloudflare Billable Usage API](https://developers.cloudflare.com/api/resources/billing/subresources/usage/methods/get_account_usage_v2)
+- [Cloudflare AI Crawl Control GraphQL API](https://developers.cloudflare.com/ai-crawl-control/reference/graphql-api/)
 - [Cloudflare GraphQL Schema](https://pages.johnspurlock.com/graphql-schema-docs/cloudflare.html)
 - [InfluxDB API](https://docs.influxdata.com/influxdb/v2.6/write-data/developer-tools/api/)
 - [Systemd Timers](https://www.freedesktop.org/software/systemd/man/systemd.timer.html)
@@ -163,6 +164,7 @@ systemctl --user list-timers
 - cloudflare_stats_pf: Pages Functions statistics grouped by hour
 - cloudflare_stats_kv_ops: KV operation statistics grouped by hour
 - cloudflare_stats_kv_storage: KV storage statistics
+- cloudflare_stats_ai_crawl: AI crawler request and response-byte statistics grouped by hour, crawler user agent, and host
 - cloudflare_billable_usage: Daily billable usage and costs grouped by service, service family, unit, and zone
 
 ## Exported metrics example
@@ -178,6 +180,7 @@ cloudflare_stats_workers,account=aa0a0aa000a0000aa00a00aa0e000a0a,worker=worker-
 cloudflare_stats_pf,account=aa0a0aa000a0000aa00a00aa0e000a0a,scriptName=pages-worker--1111111-production status="success",usageModel="standard",cpuTimeP50=3492,cpuTimeP99=3700,durationP50=0.004010875,durationP99=0.016313376,clientDisconnects=0,duration=0.024276250000000003,errors=0,requests=3,responseBodySize=4614,subrequests=0,wallTime=194210 1727431200
 cloudflare_stats_kv_ops,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c actionType="read",result="hot_read",responseStatusCode=200,latencyMsP50=116,latencyMsP99=116,objectBytes=1737,requests=1 1727445600
 cloudflare_stats_kv_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=999999aba99dd9999ef99ab78965ab1c byteCount=5369,keyCount=1 1727442000
+cloudflare_stats_ai_crawl,zone=example.com,crawler=GPTBot/1.0,host=example.com requests=4,edgeResponseBytes=512 1782864000
 cloudflare_billable_usage,account=aa0a0aa000a0000aa00a00aa0e000a0a,billingCurrency=USD,service=Workers\ Standard,serviceFamily=Workers,consumedUnit=GB-months consumedQuantity=150000,pricingQuantity=150000,contractedCost=0.75,billedCost=0,effectiveCost=0,cumulatedPricingQuantity=0,cumulatedContractedCost=2.25 1738368000
 ```
 

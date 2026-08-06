@@ -259,6 +259,127 @@ END_HEREDOC
                 --header "Accept: application/json" \
                 --data-binary @-
     fi
+
+    AI_CRAWL_GRAPHQL_QUERY=$(
+        $JQ --null-input --compact-output \
+            --arg query "$(
+                $CAT <<END_HEREDOC
+query GetAICrawlAnalytics(\$zoneTag: string, \$datetimeStart: string, \$datetimeEnd: string) {
+    viewer {
+      zones(filter: {zoneTag: \$zoneTag}) {
+        httpRequestsAdaptiveGroups(
+          limit: 5000,
+          filter: {
+            datetime_geq: \$datetimeStart,
+            datetime_leq: \$datetimeEnd,
+            requestSource: "eyeball",
+            OR: [
+              {userAgent_like: "%Novellum%"},
+              {userAgent_like: "%Anchor Browser%"},
+              {userAgent_like: "%Amazonbot%"},
+              {userAgent_like: "%Applebot%"},
+              {userAgent_like: "%archive.org_bot%"},
+              {userAgent_like: "%bingbot%"},
+              {userAgent_like: "%Bytespider%"},
+              {userAgent_like: "%CCBot%"},
+              {userAgent_like: "%ChatGPT-User%"},
+              {userAgent_like: "%ClaudeBot%"},
+              {userAgent_like: "%Claude-SearchBot%"},
+              {userAgent_like: "%Claude-User%"},
+              {userAgent_like: "%DuckAssistBot%"},
+              {userAgent_like: "%FacebookBot%"},
+              {userAgent_like: "%Googlebot%"},
+              {userAgent_like: "%Google-CloudVertexBot%"},
+              {userAgent_like: "%GPTBot%"},
+              {userAgent_like: "%meta-externalagent%"},
+              {userAgent_like: "%meta-externalfetcher%"},
+              {userAgent_like: "%MistralAI-User%"},
+              {userAgent_like: "%OAI-SearchBot%"},
+              {userAgent_like: "%PerplexityBot%"},
+              {userAgent_like: "%Perplexity-User%"},
+              {userAgent_like: "%PetalBot%"},
+              {userAgent_like: "%ProRataInc%"},
+              {userAgent_like: "%Timpibot%"},
+              {userAgent_like: "%Manus-User%"},
+              {userAgent_like: "%Terracotta%"},
+              {userAgent_like: "%CloudflareBrowserRenderingCrawler%"},
+              {userAgent_like: "%TikTokSpider%"},
+              {userAgent_like: "%Arquivo-web-crawler%"},
+              {userAgent_like: "%Baiduspider%"}
+            ]
+          }
+        ) {
+          count
+          dimensions {
+            datetimeHour
+            userAgent
+            clientRequestHTTPHost
+          }
+          sum {
+            edgeResponseBytes
+          }
+        }
+      }
+    }
+  }
+END_HEREDOC
+            )" \
+            --arg zoneTag "$cf_zone_id" \
+            --arg datetimeStart "$ISO_CURRENT_DATE_TIME_2H_AGO" \
+            --arg datetimeEnd "$ISO_CURRENT_DATE_TIME" \
+            '{query: $query, variables: {zoneTag: $zoneTag, datetimeStart: $datetimeStart, datetimeEnd: $datetimeEnd}}'
+    )
+
+    cf_ai_crawl_json=$(
+        $CURL --silent --fail --show-error --compressed \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "$CF_EMAIL_HEADER" \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            --data "$AI_CRAWL_GRAPHQL_QUERY" \
+            "$CF_URL"
+    )
+
+    cf_ai_crawl_nb_errors=$(echo "$cf_ai_crawl_json" | $JQ '.errors | length')
+
+    if [[ $cf_ai_crawl_nb_errors -gt 0 ]]; then
+        cf_ai_crawl_errors=$(echo "$cf_ai_crawl_json" | $JQ --raw-output '.errors[] | .message')
+        printf "Cloudflare AI Crawl Control API request failed with: \n%s\nAborting\n" "$cf_ai_crawl_errors" >&2
+        exit 1
+    fi
+
+    cf_ai_crawl_count=$(echo "$cf_ai_crawl_json" | $JQ '.data.viewer.zones[0].httpRequestsAdaptiveGroups | length')
+
+    if [[ $cf_ai_crawl_count -gt 0 ]]; then
+        cf_stats_ai_crawl=$(
+            echo "$cf_ai_crawl_json" |
+                $JQ --raw-output --arg zone "$cf_zone_domain" '
+                    def escape_tag:
+                        gsub("\\\\"; "\\\\") |
+                        gsub(","; "\\,") |
+                        gsub(" "; "\\ ") |
+                        gsub("="; "\\=");
+                    def tag($name; $value):
+                        $name + "=" + ($value | tostring | escape_tag);
+
+                    .data.viewer.zones[0].httpRequestsAdaptiveGroups[] |
+                    . as $row |
+                    ($row.count // 0) as $requests |
+                    ($row.sum.edgeResponseBytes // 0) as $edge_response_bytes |
+                    ($row.dimensions.datetimeHour | fromdateiso8601) as $timestamp |
+                    "cloudflare_stats_ai_crawl,\(tag("zone"; $zone)),\(tag("crawler"; $row.dimensions.userAgent)),\(tag("host"; $row.dimensions.clientRequestHTTPHost)) requests=\($requests),edgeResponseBytes=\($edge_response_bytes) \($timestamp)"
+                '
+        )
+
+        echo "$cf_stats_ai_crawl" | $GZIP |
+            $CURL --silent --fail --show-error \
+                --request POST "${INFLUXDB_URL}" \
+                --header 'Content-Encoding: gzip' \
+                --header "Authorization: Token $INFLUXDB_API_TOKEN" \
+                --header "Content-Type: text/plain; charset=utf-8" \
+                --header "Accept: application/json" \
+                --data-binary @-
+    fi
 done
 
 WORKERS_GRAPHQL_QUERY=$(
