@@ -161,12 +161,6 @@ systemctl --user list-timers
 ## Exported metrics example
 
 ```bash
-cloudflare_stats_browser,zone=example.com,browserFamily=ChromeMobileWebview pageViews=2 1703894400
-cloudflare_stats_threats,zone=example.com,threat=scan requests=1 1703894400
-cloudflare_stats_workers,account=aa0a0aa000a0000aa00a00aa0e000a0a,worker=worker-name status="scriptThrewException",requests=1 1727340566
-cloudflare_stats_queue_operations,account=aa0a0aa000a0000aa00a00aa0e000a0a,queue=queue-id,actionType=WriteMessage operations=1,billableOperations=1,bytes=64,retryCount=0,lagTime=0 1782864000
-cloudflare_billable_usage,account=aa0a0aa000a0000aa00a00aa0e000a0a,billingCurrency=USD,service=Workers\ Standard consumedQuantity=150000,billedCost=0 1738368000
-
 cloudflare_billable_usage,account=aa0a0aa000a0000aa00a00aa0e000a0a,billingCurrency=USD,service=KV\ Storage\ (GB\,\ First\ GB\ is\ included),serviceFamily=Workers\ KV,consumedUnit=GB-months consumedQuantity=0.000047330226388888887,pricingQuantity=0,contractedCost=0,billedCost=0,effectiveCost=0,cumulatedPricingQuantity=0,cumulatedContractedCost=0 1782864000
 cloudflare_stats_ai_crawl,zone=example.com,crawler=Mozilla/5.0\ AppleWebKit/537.36\ (KHTML\,\ like\ Gecko;\ compatible;\ ClaudeBot/1.0;\ +claudebot@anthropic.com),host=example.com requests=1,edgeResponseBytes=7763 1786197600
 cloudflare_stats_browser,zone=example.com,browserFamily=ChromeMobile pageViews=1 1786154400
