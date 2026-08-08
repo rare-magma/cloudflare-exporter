@@ -171,6 +171,7 @@ cloudflare_stats_d1_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,database=24
 cloudflare_stats_ip,zone=example.com,ipType=noRecord requests=1 1786150800
 cloudflare_stats_kv_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=24dba035-4372-488b-86e3-e94a5079a1eb byteCount=0,keyCount=0 1786197600
 cloudflare_stats_r2_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,bucket=eu_example,storageClass=Standard objectCount=162,uploadCount=0,payloadSize=180342,metadataSize=5726 1786199400
+cloudflare_stats_r2_operations,account=aa0a0aa000a0000aa00a00aa0e000a0a,bucket=eu_example,storageClass=Standard requests=0,responseBytes=0,responseStatusCode=200,actionStatus=success,actionType=GetObject 1786199400
 cloudflare_stats_responses,zone=example.com,status=499 requests=1 1786183200
 cloudflare_stats_threats,zone=example.com,threat=bic.ban.unknown requests=1 1786147200
 cloudflare_stats,zone=example.com bytes=361,cachedBytes=0,cachedRequests=0,encryptedBytes=361,encryptedRequests=1,pageViews=0,requests=1,threats=0,uniqueVisitors=0 1786190400
