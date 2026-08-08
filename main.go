@@ -1551,7 +1551,6 @@ func main() {
 	}
 	wg.Wait()
 
-	log.Println(e.payload.String())
-	// wg.Go(e.upload)
-	// wg.Wait()
+	wg.Go(e.upload)
+	wg.Wait()
 }
