@@ -528,8 +528,12 @@ func (t *retryableTransport) RoundTrip(req *http.Request) (*http.Response, error
 		backoff := time.Duration(math.Pow(2, float64(retries))) * time.Second * 10
 		time.Sleep(backoff)
 		if resp != nil && resp.Body != nil {
-			io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+				log.Printf("discarding retry response body: %v", err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("closing retry response body: %v", err)
+			}
 		}
 		if req.Body != nil {
 			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -589,7 +593,11 @@ func loadConfig() Config {
 	if err != nil {
 		log.Fatalln("Error reading config file: ", err)
 	}
-	defer confData.Close()
+	defer func() {
+		if err := confData.Close(); err != nil {
+			log.Printf("closing config file: %v", err)
+		}
+	}()
 	var c Config
 	if err := json.NewDecoder(confData).Decode(&c); err != nil {
 		log.Fatalf("invalid configuration: %v", err)
@@ -625,7 +633,11 @@ func (e *exporter) request(method, endpoint string, body io.Reader, graphql bool
 	if err != nil {
 		log.Fatalf("Cloudflare request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("closing Cloudflare response body: %v", err)
+		}
+	}()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("reading Cloudflare response: %v", err)
@@ -750,8 +762,6 @@ func (e *exporter) queues() []string {
 	}
 }
 
-// GraphQL uses several independently shaped datasets. Raw messages keep each
-// dataset strongly bounded while json.Number preserves Cloudflare's field type.
 func object(v json.RawMessage) map[string]json.RawMessage {
 	if len(v) == 0 || string(v) == "null" {
 		return map[string]json.RawMessage{}
@@ -1279,16 +1289,14 @@ func (e *exporter) collectBillable() {
 			continue
 		}
 		tt := tags("account", e.config.CloudflareAccountTag)
-		for _, x := range []pair{
+		tt = append(tt, []pair{
 			{"billingCurrency", stringAt(o, "BillingCurrency"), true},
 			{"service", pick("ServiceName", "x_BillableMetricName"), true},
 			{"serviceFamily", pick("ServiceFamilyName", "x_ProductFamilyName"), true},
 			{"consumedUnit", stringAt(o, "ConsumedUnit"), true},
 			{"zoneId", pick("ZoneId", "x_ZoneId"), true},
 			{"zone", pick("ZoneName", "x_ZoneName"), true},
-		} {
-			tt = append(tt, x)
-		}
+		}...)
 		e.line("cloudflare_billable_usage", tt, fs, unix(stringAt(o, "ChargePeriodStart")))
 	}
 }
@@ -1504,7 +1512,11 @@ func (e *exporter) upload() {
 	if err != nil {
 		log.Fatalf("sending data: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("closing InfluxDB response body: %v", err)
+		}
+	}()
 	statusOK := resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
