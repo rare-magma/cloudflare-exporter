@@ -20,7 +20,6 @@ services:
 
   cloudflare-exporter:
     image: ghcr.io/rare-magma/cloudflare-exporter:latest
-    init: true
     read_only: true
     cap_drop:
       - ALL
@@ -33,6 +32,6 @@ services:
           memory: 64m
           pids: 16
     volumes:
-      - ./cloudflare_exporter.conf:/app/cloudflare_exporter.conf:ro
+      - ./cloudflare_exporter.json:/cloudflare_exporter.json:ro
     labels:
       net.reddec.scheduler.cron: "5 * * * *"

@@ -1,0 +1,9 @@
+{
+  "InfluxDBHost": "",
+  "InfluxDBApiToken": "",
+  "Org": "",
+  "Bucket": "",
+  "CloudflareApiToken": "",
+  "CloudflareAccountEmail": "",
+  "CloudflareAccountTag": ""
+}

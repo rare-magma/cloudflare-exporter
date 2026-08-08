@@ -1,19 +1,19 @@
-.PHONY: install
-install:
-	@mkdir --parents $${HOME}/.local/bin \
-	&& mkdir --parents $${HOME}/.config/systemd/user \
-	&& cp cloudflare_exporter.sh $${HOME}/.local/bin/ \
-	&& chmod +x $${HOME}/.local/bin/cloudflare_exporter.sh \
-	&& cp --no-clobber cloudflare_exporter.conf $${HOME}/.config/cloudflare_exporter.conf \
-	&& chmod 400 $${HOME}/.config/cloudflare_exporter.conf \
-	&& cp cloudflare-exporter.timer $${HOME}/.config/systemd/user/ \
-	&& cp cloudflare-exporter.service $${HOME}/.config/systemd/user/ \
+.PHONY: build install uninstall
+
+build:
+	@go build -ldflags="-s -w" -o cloudflare_exporter main.go
+
+install: build
+	@mkdir --parents $${HOME}/.local/bin $${HOME}/.config/systemd/user \
+	&& cp cloudflare_exporter $${HOME}/.local/bin/ \
+	&& cp --no-clobber cloudflare_exporter.json $${HOME}/.config/cloudflare_exporter.json \
+	&& chmod 400 $${HOME}/.config/cloudflare_exporter.json \
+	&& cp cloudflare-exporter.timer cloudflare-exporter.service $${HOME}/.config/systemd/user/ \
 	&& systemctl --user enable --now cloudflare-exporter.timer
 
-.PHONY: uninstall
 uninstall:
-	@rm -f $${HOME}/.local/bin/cloudflare_exporter.sh \
-	&& rm -f $${HOME}/.config/cloudflare_exporter.conf \
+	@rm -f $${HOME}/.local/bin/cloudflare_exporter \
+	&& rm -f $${HOME}/.config/cloudflare_exporter.json \
 	&& systemctl --user disable --now cloudflare-exporter.timer \
-	&& rm -f $${HOME}/.config/.config/systemd/user/cloudflare-exporter.timer \
+	&& rm -f $${HOME}/.config/systemd/user/cloudflare-exporter.timer \
 	&& rm -f $${HOME}/.config/systemd/user/cloudflare-exporter.service

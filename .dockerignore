@@ -1,3 +1,4 @@
 *
 .*
-!cloudflare_exporter.sh
+!main.go
+!go.mod
