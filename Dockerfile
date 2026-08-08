@@ -5,6 +5,7 @@ ENV GOOS=linux
 ENV GOARCH=$TARGETARCH
 
 COPY main.go go.mod ./
+
 RUN go build -ldflags "-s -w" -trimpath -o app main.go
 
 FROM cgr.dev/chainguard/static:latest
