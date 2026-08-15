@@ -1067,7 +1067,7 @@ func (e *exporter) collectZoneHourly(z zone, date string) {
 				numeric("pageViews", sum, "pageViews"),
 				numeric("requests", sum, "requests"),
 				numeric("threats", sum, "threats"),
-				numeric("uniqueVisitors", object(row["uniq"]), "uniqueVisitors"),
+				numeric("uniqueVisitors", object(row["uniq"]), "uniques"),
 			},
 			ts,
 		)
