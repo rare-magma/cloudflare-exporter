@@ -47,7 +47,7 @@ CLI tool that uploads Cloudflare Analytics and Billable Usage API data to Influx
 1. Run it.
 
    ```bash
-   docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges:true --cpus 2 -m 64m --pids-limit 16 --volume ./cloudflare_exporter.json:/cloudflare_exporter.json:ro cloudflare-exporter
+   docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges:true --cpus 2 -m 64m --pids-limit 16 --volume ./cloudflare_exporter.json:/tmp/cloudflare_exporter.json:ro cloudflare-exporter
    ```
 
 ### With the Makefile

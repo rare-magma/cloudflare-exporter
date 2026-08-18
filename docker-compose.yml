@@ -32,6 +32,6 @@ services:
           memory: 64m
           pids: 16
     volumes:
-      - ./cloudflare_exporter.json:/cloudflare_exporter.json:ro
+      - ./cloudflare_exporter.json:/tmp/cloudflare_exporter.json:ro
     labels:
       net.reddec.scheduler.cron: "5 * * * *"
