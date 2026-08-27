@@ -113,6 +113,7 @@ The JSON config file has the following options:
   - Additionally, the `Account Analytics:Read` permission is necessary for Workers, Queues, and Workflows metrics.
   - The `Workers KV Storage Read` and `Queues Read` permissions allow automatic discovery of KV namespaces and Queues.
   - The `Billing Read` permission is necessary for billable usage metrics.
+  - The `Workers Tail Read` permission is necessary for automatic discovery of Workflows.
 - `CloudflareAccountTag` should be the tag associated with the cloudflare account.
 - Required for cloudflare accounts on a paid plan:
   - `CloudflareAccountEmail` is optional, should be the email associated with the paid cloudflare account.
