@@ -289,6 +289,73 @@ query Workers($accountTag: string, $start: string, $end: string) {
   }
 }`
 
+const workflowsSummaryQuery = `
+query WorkflowsSummary(
+  $accountTag: string
+  $datetimeStart: Time
+  $datetimeEnd: Time
+  $workflowName: string
+) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      workflowsAdaptiveGroups(
+        limit: 10000
+        filter: {
+          datetimeHour_geq: $datetimeStart
+          datetimeHour_leq: $datetimeEnd
+          workflowName: $workflowName
+        }
+        orderBy: [count_DESC]
+      ) {
+        count
+        sum {
+          cpuTime
+          wallTime
+          storageRate
+        }
+        avg {
+          wallTime
+        }
+      }
+    }
+  }
+}`
+
+const workflowsDailyQuery = `
+query WorkflowsDaily(
+  $accountTag: string
+  $datetimeStart: Time
+  $datetimeEnd: Time
+  $workflowName: string
+) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      workflowsAdaptiveGroups(
+        limit: 10000
+        filter: {
+          datetimeHour_geq: $datetimeStart
+          datetimeHour_leq: $datetimeEnd
+          workflowName: $workflowName
+        }
+        orderBy: [count_DESC]
+      ) {
+        count
+        sum {
+          stepCount
+          wallTime
+          cpuTime
+          storageRate
+          executionDuration
+          retryCount
+        }
+        dimensions {
+          date: date
+        }
+      }
+    }
+  }
+}`
+
 const kvQuery = `
 query KV(
   $accountTag: string
@@ -579,6 +646,10 @@ type queue struct {
 	ID string `json:"queue_id"`
 }
 
+type workflow struct {
+	Name string `json:"name"`
+}
+
 type exporter struct {
 	config    Config
 	client    *http.Client
@@ -730,6 +801,30 @@ func (e *exporter) namespaces() []string {
 		for _, x := range v {
 			if x.ID != "" {
 				all = append(all, x.ID)
+			}
+		}
+		if pages == 0 || page >= pages {
+			return all
+		}
+	}
+}
+
+func (e *exporter) workflows() []string {
+	var all []string
+	for page := 1; ; page++ {
+		var v []workflow
+		pages := e.rest(
+			fmt.Sprintf(
+				"%s/accounts/%s/workflows?page=%d&per_page=100",
+				cloudflareAPI,
+				url.PathEscape(e.config.CloudflareAccountTag),
+				page,
+			),
+			&v,
+		)
+		for _, x := range v {
+			if x.Name != "" {
+				all = append(all, x.Name)
 			}
 		}
 		if pages == 0 || page >= pages {
@@ -1186,6 +1281,64 @@ func (e *exporter) collectWorkers(datetimeStart, datetimeEnd string) {
 	}
 }
 
+func (e *exporter) collectWorkflows(datetimeStart, datetimeEnd string) {
+	var wg sync.WaitGroup
+	for _, workflowName := range e.workflows() {
+		workflowName := workflowName
+		wg.Go(func() {
+			variables := map[string]string{
+				"accountTag":    e.config.CloudflareAccountTag,
+				"datetimeStart": datetimeStart,
+				"datetimeEnd":   datetimeEnd,
+				"workflowName":  workflowName,
+			}
+			baseTags := tags(
+				"account",
+				e.config.CloudflareAccountTag,
+				"workflow",
+				workflowName,
+			)
+			a := account(e.gql(workflowsSummaryQuery, variables))
+			for _, r := range array(a["workflowsAdaptiveGroups"]) {
+				o := object(r)
+				e.line(
+					"cloudflare_stats_workflows_summary",
+					baseTags,
+					[]pair{
+						numeric("count", o, "count"),
+						numeric("cpuTime", o, "sum", "cpuTime"),
+						numeric("wallTime", o, "sum", "wallTime"),
+						numeric("storageRate", o, "sum", "storageRate"),
+						numeric("avgWallTime", o, "avg", "wallTime"),
+					},
+					unix(datetimeEnd),
+				)
+			}
+
+			a = account(e.gql(workflowsDailyQuery, variables))
+			for _, r := range array(a["workflowsAdaptiveGroups"]) {
+				o := object(r)
+				d := object(o["dimensions"])
+				e.line(
+					"cloudflare_stats_workflows_daily",
+					baseTags,
+					[]pair{
+						numeric("count", o, "count"),
+						numeric("stepCount", o, "sum", "stepCount"),
+						numeric("wallTime", o, "sum", "wallTime"),
+						numeric("cpuTime", o, "sum", "cpuTime"),
+						numeric("storageRate", o, "sum", "storageRate"),
+						numeric("executionDuration", o, "sum", "executionDuration"),
+						numeric("retryCount", o, "sum", "retryCount"),
+					},
+					unix(stringAt(d, "date")),
+				)
+			}
+		})
+	}
+	wg.Wait()
+}
+
 func (e *exporter) collectKV(oneHourAgo, twoHoursAgo, now string) {
 	var wg sync.WaitGroup
 	for _, id := range e.namespaces() {
@@ -1551,6 +1704,7 @@ func main() {
 
 	wg.Go(func() { e.collectQueues(twoHoursAgo, now) })
 	wg.Go(func() { e.collectWorkers(oneHourAgo, now) })
+	wg.Go(func() { e.collectWorkflows(twoHoursAgo, now) })
 	wg.Go(func() { e.collectKV(oneHourAgo, twoHoursAgo, now) })
 	wg.Go(e.collectBillable)
 	wg.Go(func() { e.collectD1(date, twoHoursAgo, now) })

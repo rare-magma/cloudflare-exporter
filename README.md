@@ -15,6 +15,7 @@ CLI tool that uploads Cloudflare Analytics and Billable Usage API data to Influx
 
 - [Cloudflare Analytics API](https://developers.cloudflare.com/analytics/graphql-api/)
 - [Cloudflare Queues metrics](https://developers.cloudflare.com/queues/observability/metrics/)
+- [Cloudflare Workflows metrics](https://developers.cloudflare.com/workflows/observability/metrics-analytics/)
 - [Cloudflare Billable Usage API](https://developers.cloudflare.com/api/resources/billing/subresources/usage/methods/get_account_usage_v2)
 - [Cloudflare AI Crawl Control GraphQL API](https://developers.cloudflare.com/ai-crawl-control/reference/graphql-api/)
 - [Cloudflare GraphQL Schema](https://pages.johnspurlock.com/graphql-schema-docs/cloudflare.html)
@@ -109,7 +110,7 @@ The JSON config file has the following options:
 - `Bucket` should be the name of the influxdb bucket that will hold the cloudflare data.
 - `CloudflareApiToken` should be the influxdb API token value.
   - This token should be assigned the `All zones - Analytics:Read` and `Zone Read` permissions.
-  - Additionally, the `Account Analytics:Read` permission is necessary for workers and Queues metrics.
+  - Additionally, the `Account Analytics:Read` permission is necessary for Workers, Queues, and Workflows metrics.
   - The `Workers KV Storage Read` and `Queues Read` permissions allow automatic discovery of KV namespaces and Queues.
   - The `Billing Read` permission is necessary for billable usage metrics.
 - `CloudflareAccountTag` should be the tag associated with the cloudflare account.
@@ -148,6 +149,8 @@ systemctl --user list-timers
 - cloudflare_stats_queue_delayed_backlog: Delayed queue backlog messages grouped by minute
 - cloudflare_stats_queue_consumers: Queue consumer concurrency grouped by minute
 - cloudflare_stats_queue_operations: Queue operation counts and bytes grouped by minute
+- cloudflare_stats_workflows_summary: Workflow invocation count, CPU time, wall time, storage rate, and average wall time
+- cloudflare_stats_workflows_daily: Workflow invocation and execution statistics grouped by date
 - cloudflare_stats_d1: D1 query volume, row, response-byte, and query-time statistics
 - cloudflare_stats_d1_storage: D1 database storage size
 - cloudflare_stats_d1_queries: D1 query count, rows read/written, and P50/P95/P99 query latency grouped by five-minute interval
@@ -172,6 +175,8 @@ cloudflare_stats_ip,zone=example.com,ipType=noRecord requests=1 1786150800
 cloudflare_stats_kv_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,namespace=24dba035-4372-488b-86e3-e94a5079a1eb byteCount=0,keyCount=0 1786197600
 cloudflare_stats_r2_storage,account=aa0a0aa000a0000aa00a00aa0e000a0a,bucket=eu_example,storageClass=Standard objectCount=162,uploadCount=0,payloadSize=180342,metadataSize=5726 1786199400
 cloudflare_stats_r2_operations,account=aa0a0aa000a0000aa00a00aa0e000a0a,bucket=eu_example,storageClass=Standard requests=0,responseBytes=0,responseStatusCode=200,actionStatus=success,actionType=GetObject 1786199400
+cloudflare_stats_workflows_summary,account=aa0a0aa000a0000aa00a00aa0e000a0a,workflow=example-workflow count=45,cpuTime=43,wallTime=920,storageRate=466944,avgWallTime=184.1132 1787875200
+cloudflare_stats_workflows_daily,account=aa0a0aa000a0000aa00a00aa0e000a0a,workflow=example-workflow count=45,stepCount=14,wallTime=920,cpuTime=43,storageRate=466944,executionDuration=0,retryCount=26 1787788800
 cloudflare_stats_responses,zone=example.com,status=499 requests=1 1786183200
 cloudflare_stats_threats,zone=example.com,threat=bic.ban.unknown requests=1 1786147200
 cloudflare_stats,zone=example.com bytes=361,cachedBytes=0,cachedRequests=0,encryptedBytes=361,encryptedRequests=1,pageViews=0,requests=1,threats=0,uniqueVisitors=0 1786190400
